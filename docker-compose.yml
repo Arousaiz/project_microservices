@@ -1,0 +1,108 @@
+version: '2'
+
+services:
+  mysql:
+    image: mysql:latest
+    restart: always
+    container_name: mysql_container
+    ports:
+      - "3306:3306"
+    expose:
+      - '3306:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: amdvpered1
+      MYSQL_DATABASE: project_DB
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: amdvpered1
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - mysql_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    restart: always
+    container_name: phpmyadmin_container
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql_container
+      MYSQL_ROOT_PASSWORD: amdvpered1
+      PMA_PORT: 3306
+    networks:
+      - mysql_network
+
+  redis:
+    image: redis:latest
+    container_name: redis_container
+    ports:
+      - "6379:6379"
+    networks:
+      - mysql_network
+
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: redis_insight
+    ports:
+      - "8001:8001"
+    depends_on:
+      - redis
+    networks:
+      - mysql_network
+
+  auth_service:
+    build:
+      context: auth
+      dockerfile: Dockerfile
+    container_name: auth_service_container
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mysql
+    networks:
+      - mysql_network
+
+  user_service:
+    build:
+      context: user_service
+      dockerfile: Dockerfile
+    container_name: user_service_container
+    ports:
+      - "3004:3004"
+    depends_on:
+      - mysql
+    networks:
+      - mysql_network
+
+  project_service:
+    build:
+      context: project_service
+      dockerfile: Dockerfile
+    container_name: project_service_container
+    ports:
+      - "3003:3003"
+    depends_on:
+      - mysql
+    networks:
+      - mysql_network
+
+  tasks_service:
+    build:
+      context: tasks_service
+      dockerfile: Dockerfile
+    container_name: tasks_service_container
+    ports:
+      - "3002:3002"
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - mysql_network
+
+volumes:
+  mysql_data:
+
+
+networks:
+  mysql_network:
